@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
@@ -24,6 +24,12 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get -y install pkg-config git subversion curl wget build-essential python-is-python3 xz-utils zip p7zip-full
+
+    - name: Fix Python 2/3 compatibility
+      run: |
+        sudo apt-get install python2
+        sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
+        sudo update-alternatives --set python /usr/bin/python2
 
     - name: depot_tools
       run: |
@@ -42,6 +48,12 @@ jobs:
         cd v8
         echo "Resetting to commit: $COMMIT"
         git reset --hard $COMMIT
+        cd ..
+
+    - name: Clean up obsolete directories
+      run: |
+        cd v8
+        rm -rf third_party/zlib third_party/re2/src third_party/logdog/logdog
         cd ..
 
     - name: build v8
