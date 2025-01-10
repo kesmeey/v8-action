@@ -22,7 +22,7 @@ jobs:
       with:
         host: 212.64.20.207
         port: 22
-        username: ubuntu
+        username: root
         password: Hj1123165691
         source: "build/*"
         target: "/var/www/html"
