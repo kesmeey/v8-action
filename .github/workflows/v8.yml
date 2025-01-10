@@ -82,15 +82,20 @@ jobs:
         ./transfer cow --block 2621440 -s -p 64 --no-progress depot_tools.zip 2>&1 | tee cowtransfer.log
         echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
 
-    - name: upload v8_src
-      if: env.SRC_UPLOAD == 'true' && !cancelled()
-      run: |
-        echo "Installing transfer tool..."
-        curl -fsSL https://git.io/file-transfer | sh
-
-        echo "Uploading all v8.7z.* files..."
-        for file in v8.7z.*; do
-          echo "Uploading $file..."
-          ./transfer cow --block 2621440 -s -p 64 --no-progress "$file" 2>&1 | tee cowtransfer.log
-          echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-        done
+    - name: upload v8.7z.001
+      uses: actions/upload-artifact@v4
+      with:
+         name: v8.7z.001
+         path: v8.7z.001
+    - name: upload v8.7z.002
+      uses: actions/upload-artifact@v4
+      with:
+         name: v8.7z.002
+         path: v8.7z.002
+         
+    - name: upload v8.7z.003
+      uses: actions/upload-artifact@v4
+      with:
+         name: v8.7z.003
+         path: v8.7z.003
+                  
