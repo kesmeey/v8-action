@@ -1,29 +1,121 @@
-name: Deploy to Server
+name: BUILD v8
 
 on:
   push:
     branches: [ master ]
 
+env:
+  PATCH_FLAG: true
+  COMMIT: 6dc88c191f5ecc5389dc26efa3ca0907faef3598
+  DEPOT_UPLOAD: false
+  SRC_UPLOAD: true
+  BINARY_UPLOAD: false
+  SERVER_HOST: ${{ secrets.SERVER_HOST }}        # 服务器地址
+  SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}  # 服务器用户名
+  SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}  # 服务器密码
+
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-20.04
+    if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@master
 
-    - name: Build project
+    - name: init env
       run: |
-        mkdir -p build
-        echo "Hello, World!" > build/index.html
+        sudo apt-get update
+        sudo apt-get -y install pkg-config git subversion curl wget build-essential python-is-python3 xz-utils zip p7zip-full
 
-    - name: Upload files via SCP
+    - name: Fix Python 2/3 compatibility
+      run: |
+        sudo apt-get install python2
+        sudo update-alternatives --install /usr/bin/python python /usr/bin/python2 1
+        sudo update-alternatives --set python /usr/bin/python2
+
+    - name: depot_tools
+      run: |
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo export PATH=\"\$PATH:`pwd`/depot_tools/\" >> ~/.bash_profile
+
+    - name: fetch v8
+      run: |
+        source ~/.bash_profile
+        fetch v8
+        cd v8
+
+    - name: patch v8
+      if: env.PATCH_FLAG == 'true' && !cancelled()
+      run: |
+        cd v8
+        echo "Resetting to commit: $COMMIT"
+        git reset --hard $COMMIT
+        cd ..
+
+    - name: Clean up obsolete directories
+      run: |
+        cd v8
+        rm -rf third_party/zlib third_party/re2/src third_party/logdog/logdog
+        cd ..
+
+    - name: build v8
+      run: |
+        source ~/.bash_profile
+        echo "Running gclient sync -f"
+        gclient sync -f
+
+    - name: zip depot_tools
+      if: env.DEPOT_UPLOAD == 'true' && !cancelled()
+      run: |
+        echo "Compressing depot_tools..."
+        zip -q -r depot_tools.zip depot_tools
+
+    - name: 7zip v8_src
+      run: |
+        echo "Compressing v8 source code..."
+        zip -q -r v8.zip v8
+        7z a v8.7z ./v8.zip -v2048m
+
+    # 上传 depot_tools 到服务器（使用 SCP）
+    - name: upload depot_tools to server
+      if: env.DEPOT_UPLOAD == 'true' && !cancelled()
       uses: appleboy/scp-action@master
       with:
-        host: ${{ secrets.SERVER_HOST }}  # 从 Secrets 获取主机 IP
+        host: ${{ secrets.SERVER_HOST }}  # 远程服务器地址
         port: 22
-        username: ${{ secrets.SERVER_USERNAME }}  # 从 Secrets 获取用户名
-        password: ${{ secrets.SERVER_PASSWORD }}  # 从 Secrets 获取密码
-        source: "build/*"
-        target: "/var/www/html"
-        debug: true  # 启用调试模式
+        username: ${{ secrets.SERVER_USERNAME }}  # 远程服务器用户名
+        password: ${{ secrets.SERVER_PASSWORD }}  # 远程服务器密码
+        source: "depot_tools.zip"
+        target: "/path/to/remote/directory"
+
+    # 上传 v8.7z 文件到服务器（使用 SCP）
+    - name: upload v8.7z.001 to server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}  # 远程服务器地址
+        port: 22
+        username: ${{ secrets.SERVER_USERNAME }}  # 远程服务器用户名
+        password: ${{ secrets.SERVER_PASSWORD }}  # 远程服务器密码
+        source: "v8.7z.001"
+        target: "/path/to/remote/directory"
+
+    - name: upload v8.7z.002 to server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}  # 远程服务器地址
+        port: 22
+        username: ${{ secrets.SERVER_USERNAME }}  # 远程服务器用户名
+        password: ${{ secrets.SERVER_PASSWORD }}  # 远程服务器密码
+        source: "v8.7z.002"
+        target: "/path/to/remote/directory"
+
+    - name: upload v8.7z.003 to server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SERVER_HOST }}  # 远程服务器地址
+        port: 22
+        username: ${{ secrets.SERVER_USERNAME }}  # 远程服务器用户名
+        password: ${{ secrets.SERVER_PASSWORD }}  # 远程服务器密码
+        source: "v8.7z.003"
+        target: "/path/to/remote/directory"
