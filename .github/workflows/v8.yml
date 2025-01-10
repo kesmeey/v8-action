@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
@@ -74,21 +74,15 @@ jobs:
         zip -q -r v8.zip v8
         7z a v8.7z ./v8.zip -v2048m
 
-    - name: upload depot_tools
-      if: env.DEPOT_UPLOAD == 'true' && !cancelled()
-      run: |
-        echo "Uploading depot_tools.zip..."
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress depot_tools.zip 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-
     - name: upload v8_src
       if: env.SRC_UPLOAD == 'true' && !cancelled()
       run: |
-        echo "Uploading v8.7z.001..."
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress v8.7z.001 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-        echo "Uploading v8.7z.002..."
-        ./transfer cow --block 2621440 -s -p 64 --no-progress v8.7z.002 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
+        echo "Installing transfer tool..."
+        curl -fsSL https://git.io/file-transfer | sh
+
+        echo "Uploading all v8.7z.* files..."
+        for file in v8.7z.*; do
+          echo "Uploading $file..."
+          ./transfer cow --block 2621440 -s -p 64 --no-progress "$file" 2>&1 | tee cowtransfer.log
+          echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
+        done
