@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: github.event.repository.owner.id == github.event.sender.id
 
     steps:
@@ -73,6 +73,14 @@ jobs:
         echo "Compressing v8 source code..."
         zip -q -r v8.zip v8
         7z a v8.7z ./v8.zip -v2048m
+
+    - name: upload depot_tools
+      if: env.DEPOT_UPLOAD == 'true' && !cancelled()
+      run: |
+        echo "Uploading depot_tools.zip..."
+        curl -fsSL git.io/file-transfer | sh
+        ./transfer cow --block 2621440 -s -p 64 --no-progress depot_tools.zip 2>&1 | tee cowtransfer.log
+        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
 
     - name: upload v8_src
       if: env.SRC_UPLOAD == 'true' && !cancelled()
